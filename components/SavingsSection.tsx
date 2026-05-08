@@ -268,7 +268,7 @@ export default function SavingsSection({ appState }: SavingsSectionProps) {
       {/* Summary cards */}
       <div style={{ background: '#fff', border: '1px solid #f0f1f5', borderRadius: '6px', boxShadow: '0 1px 3px rgba(25,39,68,.04)', display: 'flex', overflow: 'hidden' }}>
         {[
-          { label: 'Total bill generated',   value: inr(summary.totalBillGenerated),   sub: `across ${summary.totalPeriods ?? 12} billing periods`,          subColor: '#6B7280' },
+          { label: 'Clean bill amount',   value: inr(summary.cleanBill),   sub: `${summary.cleanPct}% of total bill · no penalties`,          subColor: '#15803D' },
           { label: 'Paid via platform',       value: inr(summary.paidViaPlatform),       sub: `${summary.paidViaPlatformPct}% of total bill`,                  subColor: '#1D4ED8' },
           { label: 'Early payment benefit',   value: inr(summary.earnedEarlyBenefit),    sub: `earned across ${summary.earlyBenefitBills} billing periods`,     subColor: '#15803D' },
           { label: 'Missed digital discount', value: inr(summary.missedDigitalDiscount), sub: 'bills paid outside platform · 0.75% discount foregone',    subColor: '#B91C1C' },
