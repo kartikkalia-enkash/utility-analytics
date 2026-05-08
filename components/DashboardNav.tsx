@@ -308,12 +308,13 @@ export default function DashboardNav({
               <input 
                 placeholder="Search state, branch, or CA number…" 
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onFocus={() => setSearchOpen(true)}
-                onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
+                onChange={e => { console.log('[v0] search onChange:', e.target.value); setSearchQuery(e.target.value); }}
+                onFocus={() => { console.log('[v0] search onFocus'); setSearchOpen(true); }}
+                onBlur={() => { console.log('[v0] search onBlur'); setTimeout(() => setSearchOpen(false), 200); }}
                 style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: '#111827', width: '100%', fontFamily: 'inherit' }} 
               />
             </div>
+            {console.log('[v0] dropdown check: searchOpen=', searchOpen, 'query=', searchQuery, 'states=', filteredStates.length, 'branches=', filteredBranches.length, 'cas=', filteredCAs.length)}
             {searchOpen && searchQuery.length > 0 && (
               <div style={{ position: 'absolute', top: '44px', left: 0, right: 0, background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px', zIndex: 9999, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', maxHeight: '400px', overflowY: 'auto' }}>
                 {filteredStates.length > 0 && <>
