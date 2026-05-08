@@ -123,14 +123,13 @@ export default function TopFilter({ onSearch, onDateRangeChange, onApply, onSele
           <input
             type="text" placeholder="Search state, branch, or CA num…"
             value={searchQuery}
-            onChange={e => { console.log('[v0] searchQuery changed:', e.target.value); setSearchQuery(e.target.value); onSearch?.(e.target.value) }}
-            onFocus={() => { console.log('[v0] search focused, opening dropdown'); setSearchOpen(true) }}
-            onBlur={() => { console.log('[v0] search blurred, closing dropdown in 150ms'); setTimeout(() => setSearchOpen(false), 150) }}
+            onChange={e => { setSearchQuery(e.target.value); onSearch?.(e.target.value) }}
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
             style={{ width: '100%', height: '40px', border: '1.5px solid #E5E7EB', borderRadius: '8px', padding: '0 12px 0 36px', fontSize: '13px', background: '#F3F4F6', outline: 'none', color: '#192744', fontFamily: 'Inter, sans-serif' }}
           />
-          {console.log('[v0] dropdown render check: searchOpen=', searchOpen, 'searchQuery=', searchQuery)}
-          {searchOpen && (searchQuery.length > 0) && (
-            <div style={{ position: 'absolute', top: '46px', left: 0, right: 0, background: '#fff', border: '1px solid #f3f4f6', borderRadius: '8px', zIndex: 200, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+{searchOpen && searchQuery.length > 0 && (
+            <div style={{ position: 'absolute', top: '46px', left: 0, right: 0, background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px', zIndex: 9999, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', maxHeight: '400px', overflowY: 'auto' }}>
               {filteredStates.length > 0 && <>
                 <div style={{ fontSize: '10px', fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 12px 4px' }}>States</div>
                 {filteredStates.map(s => <SearchRow key={s.name} icon={s.initials} iconBg="#EBEAFF" iconColor="#2500D7" name={s.name} meta={s.branches + ' branches · ' + s.cas + ' CAs'} onClick={() => handleSelectEntity(s.name, 'state')} />)}
@@ -297,7 +296,7 @@ export default function TopFilter({ onSearch, onDateRangeChange, onApply, onSele
 
 function SearchRow({ icon, iconBg, iconColor, name, meta, onClick }: { icon: string; iconBg: string; iconColor: string; name: string; meta: string; onClick: () => void }) {
   return (
-    <div onClick={onClick} style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f3f4f6' }}
+    <div onMouseDown={(e) => { e.preventDefault(); onClick(); }} style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f3f4f6' }}
       onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#f5f6fa'}
       onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
       <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: iconBg, color: iconColor, fontSize: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
