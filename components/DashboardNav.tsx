@@ -329,7 +329,7 @@ export default function DashboardNav({
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflowX: 'auto', flexWrap: 'nowrap', scrollbarWidth: 'none', flex: 1, minWidth: 0, overflowY: 'visible' }}>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflowX: 'auto', flexWrap: 'nowrap', scrollbarWidth: 'none', flex: 1, minWidth: 0 }}>
             {analyticsMode === 'basic' ? (
               <React.Fragment>
                 {[

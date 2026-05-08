@@ -123,11 +123,12 @@ export default function TopFilter({ onSearch, onDateRangeChange, onApply, onSele
           <input
             type="text" placeholder="Search state, branch, or CA num…"
             value={searchQuery}
-            onChange={e => { setSearchQuery(e.target.value); onSearch?.(e.target.value) }}
-            onFocus={() => setSearchOpen(true)}
-            onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+            onChange={e => { console.log('[v0] searchQuery changed:', e.target.value); setSearchQuery(e.target.value); onSearch?.(e.target.value) }}
+            onFocus={() => { console.log('[v0] search focused, opening dropdown'); setSearchOpen(true) }}
+            onBlur={() => { console.log('[v0] search blurred, closing dropdown in 150ms'); setTimeout(() => setSearchOpen(false), 150) }}
             style={{ width: '100%', height: '40px', border: '1.5px solid #E5E7EB', borderRadius: '8px', padding: '0 12px 0 36px', fontSize: '13px', background: '#F3F4F6', outline: 'none', color: '#192744', fontFamily: 'Inter, sans-serif' }}
           />
+          {console.log('[v0] dropdown render check: searchOpen=', searchOpen, 'searchQuery=', searchQuery)}
           {searchOpen && (searchQuery.length > 0) && (
             <div style={{ position: 'absolute', top: '46px', left: 0, right: 0, background: '#fff', border: '1px solid #f3f4f6', borderRadius: '8px', zIndex: 200, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
               {filteredStates.length > 0 && <>
