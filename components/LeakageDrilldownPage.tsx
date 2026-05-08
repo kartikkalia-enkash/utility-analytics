@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { STATES, BRANCHES, CAS, getFilteredBills } from '@/lib/calculations';
 
-type LeakageKey = 'Power factor <0.92' | 'Demand shrinkage' | 'Late payment surcharge' | 'Under-utilised demand';
+type LeakageKey = 'Excess demand' | 'Power factor <0.92' | 'Demand shrinkage' | 'Late payment surcharge' | 'Under-utilised demand';
 
 interface LeakageDrilldownPageProps {
   leakageKey: LeakageKey;
@@ -11,6 +11,7 @@ interface LeakageDrilldownPageProps {
 }
 
 const CONFIG: Record<LeakageKey, { color: string; bg: string; border: string; desc: string; recommendation: string }> = {
+  'Excess demand':         { color: '#DC2626', bg: '#fef2f2', border: '#fecaca', desc: 'CAs exceeding contracted demand limit every month.', recommendation: 'Revise contracted demand upward to P90 MDI + 15% buffer to eliminate excess charges.' },
   'Power factor <0.92':    { color: '#DC2626', bg: '#fef2f2', border: '#fecaca', desc: 'CAs with PF below 0.92 triggering monthly penalty charges.', recommendation: 'Install capacitor banks at high-impact locations to bring PF above 0.95.' },
   'Demand shrinkage':      { color: '#DC2626', bg: '#fef2f2', border: '#fecaca', desc: 'CAs where contracted demand is exceeded every month.', recommendation: 'Revise contracted demand upward to P90 MDI + 15% buffer.' },
   'Late payment surcharge':{ color: '#F59E0B', bg: '#fffbeb', border: '#fde68a', desc: 'CAs with 3+ consecutive months of late payment surcharge.', recommendation: 'Align payment scheduling to due dates.' },
@@ -55,7 +56,9 @@ export default function LeakageDrilldownPage({ leakageKey, onBack, appState }: L
           let amount = 0;
           let monthsAffected = 0;
           for (const b of bills as any[]) {
-            if (leakageKey === 'Power factor <0.92') {
+            if (leakageKey === 'Excess demand') {
+              if ((b.excessCharge ?? 0) > 0) { amount += b.excessCharge; monthsAffected++; }
+            } else if (leakageKey === 'Power factor <0.92') {
               if ((b.pfPenalty ?? 0) > 0) { amount += b.pfPenalty; monthsAffected++; }
             } else if (leakageKey === 'Demand shrinkage') {
               if ((b.excessCharge ?? 0) > 0) { amount += b.excessCharge; monthsAffected++; }
