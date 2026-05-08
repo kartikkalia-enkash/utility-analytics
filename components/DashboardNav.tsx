@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { STATES, BRANCHES, CAS, BILL_CATEGORIES, BillCategory } from '@/lib/calculations';
+
+interface Entity { name: string; type: 'state' | 'branch' | 'ca' }
+const MAX_PINS = 10;
+const DOT_COLOR: Record<string, string> = { state: '#2500D7', branch: '#1D9E75', ca: '#22C55E' };
 
 interface AppState {
   view: 'yearly' | 'monthly';
@@ -55,6 +59,42 @@ export default function DashboardNav({
   const [customTo, setCustomTo] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [pinnedOpen, setPinnedOpen] = useState(false);
+  const [pinnedEntities, setPinnedEntities] = useState<Entity[]>([
+    { name: 'Maharashtra', type: 'state' },
+    { name: 'Mumbai North', type: 'branch' },
+    { name: 'MH-MN-0101', type: 'ca' },
+  ]);
+  const [recentEntities] = useState<Entity[]>([
+    { name: 'Delhi South', type: 'branch' },
+    { name: 'Gujarat', type: 'state' },
+    { name: 'KA-BE-1103', type: 'ca' },
+    { name: 'Tamil Nadu', type: 'state' },
+    { name: 'Bangalore East', type: 'branch' },
+  ]);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setPinnedOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleUnpin = (name: string) => setPinnedEntities(prev => prev.filter(e => e.name !== name));
+  const handlePin = (entity: Entity) => {
+    if (pinnedEntities.length >= MAX_PINS) return;
+    if (pinnedEntities.find(e => e.name === entity.name)) return;
+    setPinnedEntities(prev => [...prev, entity]);
+  };
+  const visibleRecent = recentEntities.filter(r => !pinnedEntities.find(p => p.name === r.name));
+  const SHOW_MAX = 3;
+  const visiblePinned = pinnedEntities.slice(0, SHOW_MAX);
+  const overflowCount = pinnedEntities.length - SHOW_MAX;
 
   const q = searchQuery.toLowerCase();
   const filteredStates = useMemo(() => {
@@ -397,18 +437,82 @@ export default function DashboardNav({
 
       {/* Filter bar — row 2: pinned + chips */}
       {showSectionPills && (
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', padding: '6px 24px 8px', backgroundColor: '#fff', borderBottom: '1px solid #F3F4F6' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, background: '#F3F4F6', border: '1.5px solid #E5E7EB', borderRadius: '20px', padding: '4px 10px', cursor: 'pointer' }}>
-            <svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M1 3h11M3.5 6.5h6M5.5 10h2"/></svg>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Pinned</span>
-            <span style={{ background: '#4F46E5', color: '#fff', borderRadius: '8px', minWidth: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, padding: '0 4px' }}>3</span>
-          </div>
-          {['Maharashtra', 'Mumbai North', 'MH-MN-0101'].map(l => (
-            <div key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0, background: '#fff', border: '1.5px solid #E5E7EB', borderRadius: '20px', padding: '4px 8px 4px 10px', fontSize: '12px', fontWeight: 500, color: '#111827', whiteSpace: 'nowrap' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E' }}/>
-              {l}
+        <div ref={popoverRef} style={{ display: 'flex', gap: '6px', alignItems: 'center', padding: '6px 24px 8px', backgroundColor: '#fff', borderBottom: '1px solid #F3F4F6', position: 'relative' }}>
+          {/* Pinned toggle button */}
+          <button onClick={() => setPinnedOpen(p => !p)} style={{
+            display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+            background: pinnedOpen ? '#EEF2FF' : '#F3F4F6',
+            border: '1.5px solid ' + (pinnedOpen ? '#C7D2FE' : '#E5E7EB'),
+            borderRadius: '20px', padding: '4px 10px', cursor: 'pointer',
+          }}>
+            <svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke={pinnedOpen ? '#4F46E5' : '#6B7280'} strokeWidth="1.6" strokeLinecap="round"><path d="M1 3h11M3.5 6.5h6M5.5 10h2"/></svg>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: pinnedOpen ? '#4F46E5' : '#6B7280' }}>Pinned</span>
+            <span style={{ background: '#4F46E5', color: '#fff', borderRadius: '8px', minWidth: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, padding: '0 4px' }}>{pinnedEntities.length}</span>
+            <span style={{ fontSize: '10px', color: pinnedOpen ? '#4F46E5' : '#6B7280' }}>{pinnedOpen ? '▲' : '▾'}</span>
+          </button>
+
+          {/* Inline pinned chips — first 3 */}
+          {visiblePinned.map(e => (
+            <div key={e.name} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0, background: '#fff', border: '1.5px solid #E5E7EB', borderRadius: '20px', padding: '4px 8px 4px 10px', fontSize: '12px', fontWeight: 500, color: '#111827', whiteSpace: 'nowrap', cursor: 'pointer' }}
+              onClick={() => handleSelectEntity(e.name, e.type)}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: DOT_COLOR[e.type] }}/>
+              {e.name}
+              <button onClick={ev => { ev.stopPropagation(); handleUnpin(e.name); }}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#858ea2', fontSize: '14px', padding: 0, lineHeight: 1, marginLeft: '2px' }}
+                onMouseEnter={ev => (ev.currentTarget as HTMLButtonElement).style.color = '#A32D2D'}
+                onMouseLeave={ev => (ev.currentTarget as HTMLButtonElement).style.color = '#858ea2'}>
+                ×
+              </button>
             </div>
           ))}
+
+          {/* +N more overflow */}
+          {overflowCount > 0 && (
+            <button onClick={() => setPinnedOpen(true)}
+              style={{ height: '28px', padding: '0 10px', borderRadius: '20px', border: '1.5px solid #E5E7EB', background: '#fff', fontSize: '12px', color: '#6B7280', cursor: 'pointer', fontWeight: 500 }}>
+              +{overflowCount} more
+            </button>
+          )}
+
+          {/* Popover panel */}
+          {pinnedOpen && (
+            <div style={{ position: 'absolute', top: '40px', left: '24px', width: '480px', background: '#fff', border: '1px solid #f3f4f6', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.10)', zIndex: 9999, padding: '16px 18px' }}>
+              {/* Pinned section */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pinned ({pinnedEntities.length}/{MAX_PINS})</span>
+                <button onClick={() => setPinnedEntities([])} style={{ fontSize: '12px', color: '#858ea2', border: 'none', background: 'none', cursor: 'pointer' }}>Clear all</button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', minHeight: '32px' }}>
+                {pinnedEntities.length === 0 && <span style={{ fontSize: '12px', color: '#c4c4c4' }}>No pinned items</span>}
+                {pinnedEntities.map(e => (
+                  <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '5px', height: '32px', padding: '0 10px', borderRadius: '20px', border: '1px solid #f3f4f6', background: '#fff', fontSize: '12px', fontWeight: 500, color: '#192744' }}>
+                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: DOT_COLOR[e.type], flexShrink: 0 }} />
+                    <span>{e.name}</span>
+                    <button onClick={() => handleUnpin(e.name)}
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#858ea2', fontSize: '14px', padding: 0, lineHeight: 1, marginLeft: '2px' }}>×</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: '1px', background: '#f3f4f6', marginBottom: '14px' }} />
+
+              {/* Recent section */}
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Recent</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {visibleRecent.map(e => (
+                  <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '5px', height: '32px', padding: '0 10px', borderRadius: '20px', border: '1px dashed #d4d4d0', background: '#fff', fontSize: '12px', color: '#6b6b67', cursor: 'pointer' }}
+                    onClick={() => { if (pinnedEntities.length < MAX_PINS) handlePin(e); }}>
+                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#d4d4d0', flexShrink: 0 }} />
+                    <span>{e.name}</span>
+                    {pinnedEntities.length < MAX_PINS && (
+                      <span style={{ color: '#858ea2', fontSize: '13px', marginLeft: '2px' }}>+</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
