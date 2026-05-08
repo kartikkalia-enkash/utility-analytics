@@ -85,7 +85,8 @@ export default function LeakageDrilldownPage({ leakageKey, onBack, appState }: L
         const cas = CAS[branch] ?? [];
         for (const ca of cas) {
           if (appState.caF !== 'all' && appState.caF !== ca) continue;
-          const bills = getFilteredBills(appState.view as 'yearly' | 'monthly', state, branch, ca);
+          // Always use monthly bills for detailed breakdown to get proper month labels
+          const bills = getFilteredBills('monthly', state, branch, ca);
           let amount = 0;
           let monthsAffected = 0;
           const billDetails: BillDetail[] = [];
