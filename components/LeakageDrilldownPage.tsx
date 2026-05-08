@@ -14,7 +14,7 @@ const CONFIG: Record<LeakageKey, { color: string; bg: string; border: string; de
   'Power factor <0.92':    { color: '#DC2626', bg: '#fef2f2', border: '#fecaca', desc: 'CAs with PF below 0.92 triggering monthly penalty charges.', recommendation: 'Install capacitor banks at high-impact locations to bring PF above 0.95.' },
   'Demand shrinkage':      { color: '#DC2626', bg: '#fef2f2', border: '#fecaca', desc: 'CAs where contracted demand is exceeded every month.', recommendation: 'Revise contracted demand upward to P90 MDI + 15% buffer.' },
   'Late payment surcharge':{ color: '#F59E0B', bg: '#fffbeb', border: '#fde68a', desc: 'CAs with 3+ consecutive months of late payment surcharge.', recommendation: 'Align payment scheduling to due dates.' },
-  'Under-utilised demand': { color: '#16a34a', bg: '#f0faf6', border: '#bbf7d0', desc: 'CAs with TOD mismatch or demand consistently under-utilised below 70%.', recommendation: 'Reduce contracted demand or correct TOD slot.' },
+  'Under-utilised demand': { color: '#16a34a', bg: '#f0faf6', border: '#bbf7d0', desc: 'CAs with demand consistently under-utilised below 70%.', recommendation: 'Reduce contracted demand or correct TOD slot.' },
 };
 
 // Build lookup: caNumber -> { branch, state }
