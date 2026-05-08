@@ -69,22 +69,36 @@ export default function TopFilter({ onSearch, onDateRangeChange, onApply, onSele
   }, [])
 
   const q = searchQuery.toLowerCase()
-  const filteredStates = useMemo(() =>
-    STATES.filter(s => s.toLowerCase().includes(q)).slice(0, 4).map(s => ({
+  const filteredStates = useMemo(() => {
+    if (!q) return []
+    return STATES.filter(s => s.toLowerCase().includes(q)).slice(0, 4).map(s => ({
       name: s, initials: s.substring(0, 2).toUpperCase(),
       branches: (BRANCHES[s] ?? []).length,
       cas: (BRANCHES[s] ?? []).reduce((sum, br) => sum + (CAS[br]?.length ?? 0), 0),
-    })), [q])
-  const filteredBranches = useMemo(() =>
-    Object.keys(BRANCHES).filter(b => b.toLowerCase().includes(q)).slice(0, 4).map(b => ({
-      name: b, initials: b.substring(0, 2).toUpperCase(),
-      state: STATES.find(s => (BRANCHES[s] ?? []).includes(b)) ?? '',
-      cas: CAS[b]?.length ?? 0,
-    })), [q])
-  const filteredCAs = useMemo(() =>
-    Object.values(CAS).flat().filter(c => c.toLowerCase().includes(q)).slice(0, 5).map(c => ({
+    }))
+  }, [q])
+  const filteredBranches = useMemo(() => {
+    if (!q) return []
+    // Get all branch names from all states
+    const allBranches = Object.entries(BRANCHES).flatMap(([state, branches]) => 
+      branches.map(b => ({ name: b, state }))
+    )
+    return allBranches
+      .filter(b => b.name.toLowerCase().includes(q))
+      .slice(0, 4)
+      .map(b => ({
+        name: b.name, 
+        initials: b.name.substring(0, 2).toUpperCase(),
+        state: b.state,
+        cas: CAS[b.name]?.length ?? 0,
+      }))
+  }, [q])
+  const filteredCAs = useMemo(() => {
+    if (!q) return []
+    return Object.values(CAS).flat().filter(c => c.toLowerCase().includes(q)).slice(0, 5).map(c => ({
       id: c, branch: Object.keys(CAS).find(b => CAS[b]?.includes(c)) ?? '',
-    })), [q])
+    }))
+  }, [q])
 
   const handleUnpin = (name: string) => setPinnedEntities(prev => prev.filter(e => e.name !== name))
   const handlePin   = (entity: Entity) => {
