@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { STATES, BRANCHES, CAS, BILL_CATEGORIES, BillCategory } from '@/lib/calculations';
 
 interface AppState {
@@ -53,6 +53,41 @@ export default function DashboardNav({
   const [dateRange, setDateRange] = useState('1Y');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const q = searchQuery.toLowerCase();
+  const filteredStates = useMemo(() => {
+    if (!q) return [];
+    return STATES.filter(s => s.toLowerCase().includes(q)).slice(0, 4).map(s => ({
+      name: s, initials: s.substring(0, 2).toUpperCase(),
+      branches: (BRANCHES[s] ?? []).length,
+      cas: (BRANCHES[s] ?? []).reduce((sum, br) => sum + (CAS[br]?.length ?? 0), 0),
+    }));
+  }, [q]);
+  const filteredBranches = useMemo(() => {
+    if (!q) return [];
+    const allBranches = Object.entries(BRANCHES).flatMap(([state, branches]) => 
+      branches.map(b => ({ name: b, state }))
+    );
+    return allBranches.filter(b => b.name.toLowerCase().includes(q)).slice(0, 4).map(b => ({
+      name: b.name, initials: b.name.substring(0, 2).toUpperCase(),
+      state: b.state, cas: CAS[b.name]?.length ?? 0,
+    }));
+  }, [q]);
+  const filteredCAs = useMemo(() => {
+    if (!q) return [];
+    return Object.values(CAS).flat().filter(c => c.toLowerCase().includes(q)).slice(0, 5).map(c => ({
+      id: c, branch: Object.keys(CAS).find(b => CAS[b]?.includes(c)) ?? '',
+    }));
+  }, [q]);
+
+  const handleSelectEntity = (name: string, type: string) => {
+    setSearchQuery(''); setSearchOpen(false);
+    if (type === 'state') onStateChange(name);
+    if (type === 'branch') onBranchChange(name);
+    if (type === 'ca') onCAChange(name);
+  };
 
   const basicSections = [
     { id: 'summary',   label: 'Summary',   icon: <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="1" y="1" width="4.5" height="4.5" rx="1"/><rect x="7.5" y="1" width="4.5" height="4.5" rx="1"/><rect x="1" y="7.5" width="4.5" height="4.5" rx="1"/><rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1"/></svg> },
@@ -267,9 +302,67 @@ export default function DashboardNav({
       {/* Filter bar — row 1: search + date + apply */}
       {showSectionPills && (
         <div style={{ padding: '10px 24px 6px', display: 'flex', gap: '8px', alignItems: 'center', borderBottom: '1px solid #F3F4F6', backgroundColor: '#fff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, background: '#F3F4F6', border: '1.5px solid #E5E7EB', borderRadius: '8px', padding: '7px 12px' }}>
-            <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="#9CA3AF" strokeWidth="1.7" strokeLinecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5l2.5 2.5"/></svg>
-            <input placeholder="Search state, branch, or CA number…" style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: '#111827', width: '100%', fontFamily: 'inherit' }} />
+          <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F3F4F6', border: '1.5px solid #E5E7EB', borderRadius: '8px', padding: '7px 12px' }}>
+              <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="#9CA3AF" strokeWidth="1.7" strokeLinecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5l2.5 2.5"/></svg>
+              <input 
+                placeholder="Search state, branch, or CA number…" 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchOpen(true)}
+                onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: '#111827', width: '100%', fontFamily: 'inherit' }} 
+              />
+            </div>
+            {searchOpen && searchQuery.length > 0 && (
+              <div style={{ position: 'absolute', top: '44px', left: 0, right: 0, background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px', zIndex: 9999, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', maxHeight: '400px', overflowY: 'auto' }}>
+                {filteredStates.length > 0 && <>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 12px 4px' }}>States</div>
+                  {filteredStates.map(s => (
+                    <div key={s.name} onMouseDown={(e) => { e.preventDefault(); handleSelectEntity(s.name, 'state'); }} style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f3f4f6' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#f5f6fa'}
+                      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
+                      <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: '#EBEAFF', color: '#2500D7', fontSize: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.initials}</div>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 500, color: '#192744' }}>{s.name}</div>
+                        <div style={{ fontSize: '11px', color: '#858ea2' }}>{s.branches} branches · {s.cas} CAs</div>
+                      </div>
+                    </div>
+                  ))}
+                </>}
+                {filteredBranches.length > 0 && <>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 12px 4px' }}>Branches</div>
+                  {filteredBranches.map(b => (
+                    <div key={b.name} onMouseDown={(e) => { e.preventDefault(); handleSelectEntity(b.name, 'branch'); }} style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f3f4f6' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#f5f6fa'}
+                      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
+                      <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: '#E6F1FB', color: '#0C447C', fontSize: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{b.initials}</div>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 500, color: '#192744' }}>{b.name}</div>
+                        <div style={{ fontSize: '11px', color: '#858ea2' }}>{b.state} · {b.cas} CAs</div>
+                      </div>
+                    </div>
+                  ))}
+                </>}
+                {filteredCAs.length > 0 && <>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 12px 4px' }}>CA numbers</div>
+                  {filteredCAs.map(c => (
+                    <div key={c.id} onMouseDown={(e) => { e.preventDefault(); handleSelectEntity(c.id, 'ca'); }} style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f3f4f6' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#f5f6fa'}
+                      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
+                      <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: '#EAF3DE', color: '#27500A', fontSize: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>CA</div>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 500, color: '#192744' }}>{c.id}</div>
+                        <div style={{ fontSize: '11px', color: '#858ea2' }}>{c.branch}</div>
+                      </div>
+                    </div>
+                  ))}
+                </>}
+                {filteredStates.length === 0 && filteredBranches.length === 0 && filteredCAs.length === 0 && (
+                  <div style={{ padding: '14px 12px', fontSize: '13px', color: '#858ea2', textAlign: 'center' }}>No results for &quot;{searchQuery}&quot;</div>
+                )}
+              </div>
+            )}
           </div>
           {(() => {
             const dateLabel = dateRange === '1M' ? 'Last 1 month' : dateRange === '3M' ? 'Last 3 months' : dateRange === 'Custom' ? (customFrom && customTo ? `${customFrom} – ${customTo}` : 'Custom range') : 'Apr 2024 – Mar 2025'
