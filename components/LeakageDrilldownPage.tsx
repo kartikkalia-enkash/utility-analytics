@@ -33,17 +33,33 @@ function buildCAMeta(): Record<string, { branch: string; state: string }> {
   return meta;
 }
 
+interface BillDetail {
+  billNumber: string;
+  billMonth: string;
+  leakageAmount: number;
+}
+
 export default function LeakageDrilldownPage({ leakageKey, onBack, appState }: LeakageDrilldownPageProps) {
   const [sortCol, setSortCol] = useState<'amount' | 'months' | 'ca' | 'branch' | 'state'>('amount');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [search, setSearch] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (ca: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(ca)) next.delete(ca);
+      else next.add(ca);
+      return next;
+    });
+  };
 
   const cfg = CONFIG[leakageKey];
   const caMeta = buildCAMeta();
 
   // Build rows by iterating CAS directly so we have ca/branch/state
   const rows = (() => {
-    const result: { ca: string; branch: string; state: string; months: number; amount: number }[] = [];
+    const result: { ca: string; branch: string; state: string; months: number; amount: number; billDetails: BillDetail[] }[] = [];
     for (const state of STATES) {
       if (appState.stateF !== 'all' && appState.stateF !== state) continue;
       const branches = BRANCHES[state] ?? [];
@@ -55,20 +71,31 @@ export default function LeakageDrilldownPage({ leakageKey, onBack, appState }: L
           const bills = getFilteredBills(appState.view as 'yearly' | 'monthly', state, branch, ca);
           let amount = 0;
           let monthsAffected = 0;
+          const billDetails: BillDetail[] = [];
           for (const b of bills as any[]) {
+            let leakageAmt = 0;
             if (leakageKey === 'Excess demand') {
-              if ((b.excessCharge ?? 0) > 0) { amount += b.excessCharge; monthsAffected++; }
+              leakageAmt = b.excessCharge ?? 0;
             } else if (leakageKey === 'Power factor <0.92') {
-              if ((b.pfPenalty ?? 0) > 0) { amount += b.pfPenalty; monthsAffected++; }
+              leakageAmt = b.pfPenalty ?? 0;
             } else if (leakageKey === 'Demand shrinkage') {
-              if ((b.excessCharge ?? 0) > 0) { amount += b.excessCharge; monthsAffected++; }
+              leakageAmt = b.excessCharge ?? 0;
             } else if (leakageKey === 'Late payment surcharge') {
-              if ((b.latePayment ?? 0) > 0) { amount += b.latePayment; monthsAffected++; }
+              leakageAmt = b.latePayment ?? 0;
             } else {
-              if ((b.todViolation ?? 0) > 0) { amount += b.todViolation; monthsAffected++; }
+              leakageAmt = b.todViolation ?? 0;
+            }
+            if (leakageAmt > 0) {
+              amount += leakageAmt;
+              monthsAffected++;
+              billDetails.push({
+                billNumber: `${ca}-${b.label?.replace(/\s/g, '') || 'BILL'}`,
+                billMonth: b.label || 'Unknown',
+                leakageAmount: leakageAmt,
+              });
             }
           }
-          if (amount > 0) result.push({ ca, branch, state, months: monthsAffected, amount });
+          if (amount > 0) result.push({ ca, branch, state, months: monthsAffected, amount, billDetails });
         }
       }
     }
@@ -204,32 +231,86 @@ export default function LeakageDrilldownPage({ leakageKey, onBack, appState }: L
               ) : sorted.map((r: any, i: number) => {
                 const sharePct = totalAmount > 0 ? (r.amount / totalAmount) * 100 : 0;
                 const monthColor = r.months >= 9 ? '#DC2626' : r.months >= 6 ? '#F59E0B' : '#858ea2';
+                const isExpanded = expandedRows.has(r.ca);
                 return (
-                  <tr key={i}
-                    style={{ borderBottom: '1px solid #f0f1f5', transition: 'background .1s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#f5f6fa')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <td style={{ padding: '11px 16px', fontWeight: 600, color: '#192744', fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.02em' }}>{r.ca}</td>
-                    <td style={{ padding: '11px 16px', color: '#192744' }}>{r.branch}</td>
-                    <td style={{ padding: '11px 16px' }}>
-                      <span style={{ fontSize: 11, color: '#858ea2', background: '#f5f6fa', border: '1px solid #f0f1f5', borderRadius: 4, padding: '2px 7px' }}>{r.state}</span>
-                    </td>
-                    <td style={{ padding: '11px 16px', textAlign: 'right' }}>
-                      <span style={{ fontWeight: 600, color: monthColor }}>{r.months}</span>
-                      <span style={{ color: '#c8cbd6' }}> / 12</span>
-                    </td>
-                    <td style={{ padding: '11px 16px', textAlign: 'right', fontWeight: 700, color: cfg.color, letterSpacing: '-0.01em' }}>
-                      ₹{(r.amount / 100000).toFixed(2)}L
-                    </td>
-                    <td style={{ padding: '11px 16px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                        <div style={{ width: 64, height: 4, background: '#f0f1f5', borderRadius: 99, overflow: 'hidden' }}>
-                          <div style={{ width: sharePct + '%', height: '100%', background: cfg.color, borderRadius: 99, opacity: 0.7 }} />
+                  <React.Fragment key={i}>
+                    <tr
+                      style={{ borderBottom: isExpanded ? 'none' : '1px solid #f0f1f5', transition: 'background .1s', background: isExpanded ? '#fafbfc' : 'transparent' }}
+                      onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = '#f5f6fa'; }}
+                      onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'transparent'; }}>
+                      <td style={{ padding: '11px 16px', fontWeight: 600, color: '#192744', fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.02em' }}>{r.ca}</td>
+                      <td style={{ padding: '11px 16px', color: '#192744' }}>{r.branch}</td>
+                      <td style={{ padding: '11px 16px' }}>
+                        <span style={{ fontSize: 11, color: '#858ea2', background: '#f5f6fa', border: '1px solid #f0f1f5', borderRadius: 4, padding: '2px 7px' }}>{r.state}</span>
+                      </td>
+                      <td style={{ padding: '11px 16px', textAlign: 'right' }}>
+                        <button
+                          onClick={() => toggleExpand(r.ca)}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+                            borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 4,
+                            transition: 'background .15s',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#e5e7eb')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                        >
+                          <span style={{ fontWeight: 600, color: monthColor }}>{r.months}</span>
+                          <span style={{ color: '#c8cbd6' }}> / 12</span>
+                          <span style={{ fontSize: 10, color: '#858ea2', marginLeft: 4, transition: 'transform .2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                        </button>
+                      </td>
+                      <td style={{ padding: '11px 16px', textAlign: 'right', fontWeight: 700, color: cfg.color, letterSpacing: '-0.01em' }}>
+                        ₹{(r.amount / 100000).toFixed(2)}L
+                      </td>
+                      <td style={{ padding: '11px 16px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                          <div style={{ width: 64, height: 4, background: '#f0f1f5', borderRadius: 99, overflow: 'hidden' }}>
+                            <div style={{ width: sharePct + '%', height: '100%', background: cfg.color, borderRadius: 99, opacity: 0.7 }} />
+                          </div>
+                          <span style={{ fontSize: 11, color: '#858ea2', minWidth: 34, textAlign: 'right' }}>{sharePct.toFixed(1)}%</span>
                         </div>
-                        <span style={{ fontSize: 11, color: '#858ea2', minWidth: 34, textAlign: 'right' }}>{sharePct.toFixed(1)}%</span>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                    {/* Expanded bill details row */}
+                    {isExpanded && (
+                      <tr style={{ background: '#fafbfc' }}>
+                        <td colSpan={6} style={{ padding: '0 16px 16px 48px' }}>
+                          <div style={{ background: '#fff', border: '1px solid #f0f1f5', borderRadius: 6, overflow: 'hidden' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                              <thead>
+                                <tr style={{ background: '#f5f6fa' }}>
+                                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 9, fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Bill Number</th>
+                                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 9, fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Bill Month</th>
+                                  <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 9, fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Leakage Amount</th>
+                                  <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 9, fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Share</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {r.billDetails.map((bill: BillDetail, bi: number) => {
+                                  const billSharePct = r.amount > 0 ? (bill.leakageAmount / r.amount) * 100 : 0;
+                                  return (
+                                    <tr key={bi} style={{ borderBottom: bi < r.billDetails.length - 1 ? '1px solid #f0f1f5' : 'none' }}>
+                                      <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 10, color: '#192744', fontWeight: 500 }}>{bill.billNumber}</td>
+                                      <td style={{ padding: '8px 12px', color: '#6b7280' }}>{bill.billMonth}</td>
+                                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: cfg.color }}>₹{(bill.leakageAmount / 100000).toFixed(2)}L</td>
+                                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                                          <div style={{ width: 40, height: 3, background: '#f0f1f5', borderRadius: 99, overflow: 'hidden' }}>
+                                            <div style={{ width: billSharePct + '%', height: '100%', background: cfg.color, borderRadius: 99, opacity: 0.6 }} />
+                                          </div>
+                                          <span style={{ fontSize: 10, color: '#858ea2', minWidth: 30, textAlign: 'right' }}>{billSharePct.toFixed(0)}%</span>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
