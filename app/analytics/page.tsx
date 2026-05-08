@@ -11,6 +11,7 @@ import SavingsSection from '@/components/SavingsSection';
 import HeatmapDrilldownPage from '@/components/HeatmapDrilldownPage';
 import AnomalyDrilldownPage from '@/components/AnomalyDrilldownPage';
 import LeakageDrilldownPage from '@/components/LeakageDrilldownPage';
+import SavingsDrilldownPage from '@/components/SavingsDrilldownPage';
 import MultiBillReviewPage from '@/components/MultiBillReviewPage';
 import BasicAnalyticsShell from '@/components/BasicAnalyticsShell';
 import { BillCategory } from '@/lib/calculations';
@@ -33,6 +34,7 @@ export default function AnalyticsPage() {
   const [drilldown, setDrilldown] = useState<{ state: string; month: string; monthIndex: number } | null>(null);
   const [anomalyDrilldown, setAnomalyDrilldown] = useState<'over_contracted_every_month' | 'pf_below_threshold' | 'recurring_late_payment' | 'under_utilised' | null>(null);
   const [leakageDrilldown, setLeakageDrilldown] = useState<string | null>(null);
+  const [savingsDrilldown, setSavingsDrilldown] = useState<'contract' | 'pf' | 'affected' | 'clean' | null>(null);
   const [multiBillReview, setMultiBillReview] = useState(false);
 
   const handleProductChange = (product: 'bill-payment' | 'vendor-payment' | 'rental-payment' | 'gst') => {
@@ -95,7 +97,13 @@ export default function AnalyticsPage() {
           <BasicAnalyticsShell appState={appState} section={basicSection} analyticsMode={analyticsMode} />
         ) : (
           <>
-            {leakageDrilldown ? (
+            {savingsDrilldown ? (
+              <SavingsDrilldownPage
+                savingsKey={savingsDrilldown}
+                onBack={() => setSavingsDrilldown(null)}
+                appState={appState}
+              />
+            ) : leakageDrilldown ? (
               <LeakageDrilldownPage
                 leakageKey={leakageDrilldown as any}
                 onBack={() => setLeakageDrilldown(null)}
@@ -144,7 +152,7 @@ export default function AnalyticsPage() {
                     {activeSection === 'excess-demand' && <ExcessDemandSection appState={appState} />}
                     {activeSection === 'consumption' && <ConsumptionSection appState={appState} />}
                     {activeSection === 'leakages' && <LeakagesSection onDrilldown={(state, month, monthIndex) => setDrilldown({ state, month, monthIndex })} onLeakageCardClick={(key) => setLeakageDrilldown(key)} appState={appState} />}
-                    {activeSection === 'savings' && <SavingsSection appState={appState} />}
+                    {activeSection === 'savings' && <SavingsSection appState={appState} onCTAClick={(key) => setSavingsDrilldown(key)} />}
                     
                   </>
                 ) : (

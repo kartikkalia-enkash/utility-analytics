@@ -9,9 +9,10 @@ import { getFilteredBills, CAS, getCABills, inr, inrK } from '@/lib/calculations
 
 interface SavingsSectionProps {
   appState: { view: string; stateF: string; branchF: string; caF: string }
+  onCTAClick?: (key: 'contract' | 'pf' | 'affected' | 'clean') => void
 }
 
-export default function SavingsSection({ appState }: SavingsSectionProps) {
+export default function SavingsSection({ appState, onCTAClick }: SavingsSectionProps) {
   const cleanVsPenaltyRef   = useRef<HTMLCanvasElement>(null)
   const savingsTrendRef     = useRef<HTMLCanvasElement>(null)
   const cleanVsPenaltyChart = useRef<Chart | null>(null)
@@ -349,11 +350,11 @@ export default function SavingsSection({ appState }: SavingsSectionProps) {
       {/* KPI insight cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(0,1fr))', gap:'14px' }}>
         {([
-          { color: '#DC2626', label: 'Contract revision saving', value: inr(summary.contractSaving), valueSub: 'No excess demand charges', desc: 'Raise contracted demand to P80 MDI + 10% buffer — eliminates all excess demand charges.', cta: 'Model revision' },
-          { color: '#F59E0B', label: 'PF improvement saving',    value: inr(summary.pfSaving),       valueSub: 'Maintain PF ≥ 0.95 via capacitor banks', desc: 'Eliminating PF penalties by maintaining power factor above 0.95 across all CAs.', cta: 'View CA list' },
-          { color: '#DC2626', label: 'Affected bill rate',        value: summary.avoidablePct + '%',    valueSub: inr(summary.avoidable) + ' in penalties', desc: 'Percentage of bills carrying avoidable charges that can be eliminated with corrective actions.', cta: 'See breakdown' },
-          { color: '#2563EB', label: 'Clean bill rate',          value: summary.cleanPct + '%',       valueSub: 'Avg across all CAs · higher is better', desc: 'Bills at ' + summary.cleanPct + '% clean — ' + (100 - summary.cleanPct) + '% still carry avoidable charges that can be eliminated.', cta: 'View profile' },
-        ] as Array<{ color: string; label: string; value: string; valueSub: string; desc: string; cta: string }>).map((item, i) => (
+          { key: 'contract' as const, color: '#DC2626', label: 'Contract revision saving', value: inr(summary.contractSaving), valueSub: 'No excess demand charges', desc: 'Raise contracted demand to P80 MDI + 10% buffer — eliminates all excess demand charges.', cta: 'Model revision' },
+          { key: 'pf' as const, color: '#F59E0B', label: 'PF improvement saving',    value: inr(summary.pfSaving),       valueSub: 'Maintain PF ≥ 0.95 via capacitor banks', desc: 'Eliminating PF penalties by maintaining power factor above 0.95 across all CAs.', cta: 'View CA list' },
+          { key: 'affected' as const, color: '#DC2626', label: 'Affected bill rate',        value: summary.avoidablePct + '%',    valueSub: inr(summary.avoidable) + ' in penalties', desc: 'Percentage of bills carrying avoidable charges that can be eliminated with corrective actions.', cta: 'See breakdown' },
+          { key: 'clean' as const, color: '#2563EB', label: 'Clean bill rate',          value: summary.cleanPct + '%',       valueSub: 'Avg across all CAs · higher is better', desc: 'Bills at ' + summary.cleanPct + '% clean — ' + (100 - summary.cleanPct) + '% still carry avoidable charges that can be eliminated.', cta: 'View profile' },
+        ]).map((item, i) => (
           <div key={i} style={{ background: '#fff', borderLeft: '1px solid #f0f1f5', borderRight: '1px solid #f0f1f5', borderBottom: '1px solid #f0f1f5', borderTop: '2.5px solid ' + item.color, borderRadius: '6px', boxShadow: '0 1px 3px rgba(25,39,68,.04)', padding: '18px 20px 16px', display: 'flex', flexDirection: 'column', gap: 0, cursor: 'default', minHeight: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
               <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
@@ -364,7 +365,7 @@ export default function SavingsSection({ appState }: SavingsSectionProps) {
               <div style={{ fontSize: '11px', color: '#858ea2', marginBottom: '3px' }}>{item.valueSub}</div>
               <div style={{ fontSize: '14px', fontWeight: 600, color: '#192744', letterSpacing: '-0.01em' }}>{item.desc}</div>
             </div>
-            <button style={{ alignSelf: 'flex-start', fontSize: '12px', fontWeight: 500, color: item.color, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', marginTop: 'auto' }}>{item.cta} →</button>
+            <button onClick={() => onCTAClick?.(item.key)} style={{ alignSelf: 'flex-start', fontSize: '12px', fontWeight: 500, color: item.color, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', marginTop: 'auto' }}>{item.cta} →</button>
           </div>
         ))}
       </div>
