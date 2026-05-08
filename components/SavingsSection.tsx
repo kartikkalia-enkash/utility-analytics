@@ -271,7 +271,7 @@ export default function SavingsSection({ appState }: SavingsSectionProps) {
           { label: 'Clean bill amount',   value: inr(summary.cleanBill),   sub: `${summary.cleanPct}% of total bill · no penalties`,          subColor: '#15803D' },
           { label: 'Paid via platform',       value: inr(summary.paidViaPlatform),       sub: `${summary.paidViaPlatformPct}% of total bill`,                  subColor: '#1D4ED8' },
           { label: 'Early payment benefit',   value: inr(summary.earnedEarlyBenefit),    sub: `earned across ${summary.earlyBenefitBills} billing periods`,     subColor: '#15803D' },
-          { label: 'Missed digital discount', value: inr(summary.missedDigitalDiscount), sub: 'bills paid outside platform · 0.75% discount foregone',    subColor: '#B91C1C' },
+          { label: 'Refunds', value: inr(0), sub: 'No refunds processed this period',    subColor: '#6B7280' },
         ].map((k, i) => (
           <div key={k.label} style={{ flex: 1, padding: '20px 24px', position: 'relative' }}>
             {i > 0 && <div style={{ position: 'absolute', left: 0, top: '16px', bottom: '16px', width: '1px', background: '#f0f1f5' }} />}
