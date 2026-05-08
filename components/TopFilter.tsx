@@ -69,22 +69,36 @@ export default function TopFilter({ onSearch, onDateRangeChange, onApply, onSele
   }, [])
 
   const q = searchQuery.toLowerCase()
-  const filteredStates = useMemo(() =>
-    STATES.filter(s => s.toLowerCase().includes(q)).slice(0, 4).map(s => ({
+  const filteredStates = useMemo(() => {
+    if (!q) return []
+    return STATES.filter(s => s.toLowerCase().includes(q)).slice(0, 4).map(s => ({
       name: s, initials: s.substring(0, 2).toUpperCase(),
       branches: (BRANCHES[s] ?? []).length,
       cas: (BRANCHES[s] ?? []).reduce((sum, br) => sum + (CAS[br]?.length ?? 0), 0),
-    })), [q])
-  const filteredBranches = useMemo(() =>
-    Object.keys(BRANCHES).filter(b => b.toLowerCase().includes(q)).slice(0, 4).map(b => ({
-      name: b, initials: b.substring(0, 2).toUpperCase(),
-      state: STATES.find(s => (BRANCHES[s] ?? []).includes(b)) ?? '',
-      cas: CAS[b]?.length ?? 0,
-    })), [q])
-  const filteredCAs = useMemo(() =>
-    Object.values(CAS).flat().filter(c => c.toLowerCase().includes(q)).slice(0, 5).map(c => ({
+    }))
+  }, [q])
+  const filteredBranches = useMemo(() => {
+    if (!q) return []
+    // Get all branch names from all states
+    const allBranches = Object.entries(BRANCHES).flatMap(([state, branches]) => 
+      branches.map(b => ({ name: b, state }))
+    )
+    return allBranches
+      .filter(b => b.name.toLowerCase().includes(q))
+      .slice(0, 4)
+      .map(b => ({
+        name: b.name, 
+        initials: b.name.substring(0, 2).toUpperCase(),
+        state: b.state,
+        cas: CAS[b.name]?.length ?? 0,
+      }))
+  }, [q])
+  const filteredCAs = useMemo(() => {
+    if (!q) return []
+    return Object.values(CAS).flat().filter(c => c.toLowerCase().includes(q)).slice(0, 5).map(c => ({
       id: c, branch: Object.keys(CAS).find(b => CAS[b]?.includes(c)) ?? '',
-    })), [q])
+    }))
+  }, [q])
 
   const handleUnpin = (name: string) => setPinnedEntities(prev => prev.filter(e => e.name !== name))
   const handlePin   = (entity: Entity) => {
@@ -125,11 +139,11 @@ export default function TopFilter({ onSearch, onDateRangeChange, onApply, onSele
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); onSearch?.(e.target.value) }}
             onFocus={() => setSearchOpen(true)}
-            onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+            onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
             style={{ width: '100%', height: '40px', border: '1.5px solid #E5E7EB', borderRadius: '8px', padding: '0 12px 0 36px', fontSize: '13px', background: '#F3F4F6', outline: 'none', color: '#192744', fontFamily: 'Inter, sans-serif' }}
           />
-          {searchOpen && (searchQuery.length > 0) && (
-            <div style={{ position: 'absolute', top: '46px', left: 0, right: 0, background: '#fff', border: '1px solid #f3f4f6', borderRadius: '8px', zIndex: 200, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+{searchOpen && searchQuery.length > 0 && (
+            <div style={{ position: 'absolute', top: '46px', left: 0, right: 0, background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px', zIndex: 9999, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', maxHeight: '400px', overflowY: 'auto' }}>
               {filteredStates.length > 0 && <>
                 <div style={{ fontSize: '10px', fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 12px 4px' }}>States</div>
                 {filteredStates.map(s => <SearchRow key={s.name} icon={s.initials} iconBg="#EBEAFF" iconColor="#2500D7" name={s.name} meta={s.branches + ' branches · ' + s.cas + ' CAs'} onClick={() => handleSelectEntity(s.name, 'state')} />)}
@@ -296,7 +310,7 @@ export default function TopFilter({ onSearch, onDateRangeChange, onApply, onSele
 
 function SearchRow({ icon, iconBg, iconColor, name, meta, onClick }: { icon: string; iconBg: string; iconColor: string; name: string; meta: string; onClick: () => void }) {
   return (
-    <div onClick={onClick} style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f3f4f6' }}
+    <div onMouseDown={(e) => { e.preventDefault(); onClick(); }} style={{ padding: '9px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f3f4f6' }}
       onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#f5f6fa'}
       onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
       <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: iconBg, color: iconColor, fontSize: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
