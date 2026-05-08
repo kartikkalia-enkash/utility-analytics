@@ -11,6 +11,7 @@ import SavingsSection from '@/components/SavingsSection';
 import HeatmapDrilldownPage from '@/components/HeatmapDrilldownPage';
 import AnomalyDrilldownPage from '@/components/AnomalyDrilldownPage';
 import LeakageDrilldownPage from '@/components/LeakageDrilldownPage';
+import SavingsDrilldownPage from '@/components/SavingsDrilldownPage';
 import MultiBillReviewPage from '@/components/MultiBillReviewPage';
 import BasicAnalyticsShell from '@/components/BasicAnalyticsShell';
 import { BillCategory } from '@/lib/calculations';
@@ -97,13 +98,8 @@ export default function AnalyticsPage() {
         ) : (
           <>
             {savingsDrilldown ? (
-              <LeakageDrilldownPage
-                leakageKey={
-                  savingsDrilldown === 'pf' ? 'Power factor <0.92' :
-                  savingsDrilldown === 'contract' ? 'Excess demand' :
-                  savingsDrilldown === 'affected' ? 'Excess demand' :
-                  'Power factor <0.92'
-                }
+              <SavingsDrilldownPage
+                savingsKey={savingsDrilldown}
                 onBack={() => setSavingsDrilldown(null)}
                 appState={appState}
               />
