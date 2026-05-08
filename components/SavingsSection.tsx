@@ -375,12 +375,13 @@ export default function SavingsSection({ appState }: SavingsSectionProps) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: '12px' }}>
           {(() => {
             const totalPotential = summary.totalIncentivePotential
-            const items = [
-              { label: 'Digital payment benefit', value: summary.digitalPaymentBenefit, total: summary.totalIncentivePotential, sub: 'Accrued this period', color: '#36b37e', bg: '#f0faf6', bd: '#bbf7d0' },
-              { label: 'Early payment discount',  value: summary.earlyPaymentDiscount,  total: summary.totalIncentivePotential, sub: 'Across discount windows', color: '#36b37e', bg: '#f0faf6', bd: '#bbf7d0' },
-              { label: 'PF incentive',            value: summary.earnedPfIncentive,     total: summary.totalIncentivePotential, sub: 'Months in target', color: '#f59e0b', bg: '#fffbeb', bd: '#fde68a' },
-              { label: 'Potential upside',        value: Math.max(0, totalPotential - summary.totalEarnedIncentives), total: totalPotential, sub: 'If all targets met', color: '#1c5af4', bg: '#eef3fe', bd: '#c7d2fe' },
-            ] as Array<{ label: string; value: number; total: number; sub: string; color: string; bg: string; bd: string }>
+const paidViaPlatform = summary.paidViaPlatform || 1
+  const items = [
+  { label: 'Digital payment benefit', value: summary.digitalPaymentBenefit, total: summary.totalIncentivePotential, sub: 'Accrued this period', sub2: ((summary.digitalPaymentBenefit / paidViaPlatform) * 100).toFixed(2) + '% of EnKash paid bills', color: '#36b37e', bg: '#f0faf6', bd: '#bbf7d0' },
+  { label: 'Early payment discount',  value: summary.earlyPaymentDiscount,  total: summary.totalIncentivePotential, sub: 'Across discount windows', sub2: ((summary.earlyPaymentDiscount / paidViaPlatform) * 100).toFixed(2) + '% of EnKash paid bills', color: '#36b37e', bg: '#f0faf6', bd: '#bbf7d0' },
+  { label: 'PF incentive',            value: summary.earnedPfIncentive,     total: summary.totalIncentivePotential, sub: 'Months in target', sub2: ((summary.earnedPfIncentive / paidViaPlatform) * 100).toFixed(2) + '% of EnKash paid bills', color: '#f59e0b', bg: '#fffbeb', bd: '#fde68a' },
+  { label: 'Potential upside',        value: Math.max(0, totalPotential - summary.totalEarnedIncentives), total: totalPotential, sub: 'If all targets met', sub2: ((Math.max(0, totalPotential - summary.totalEarnedIncentives) / paidViaPlatform) * 100).toFixed(2) + '% additional possible', color: '#1c5af4', bg: '#eef3fe', bd: '#c7d2fe' },
+  ] as Array<{ label: string; value: number; total: number; sub: string; sub2: string; color: string; bg: string; bd: string }>
             return items.map((item, i) => {
               const pct = Math.round((item.value / Math.max(item.total, 1)) * 100)
               const r = 17, circ = 2 * Math.PI * r, dash = (pct / 100) * circ
@@ -398,7 +399,8 @@ export default function SavingsSection({ appState }: SavingsSectionProps) {
                       <text x="21" y="25" textAnchor="middle" fontSize="9" fontWeight="600" fill={item.color} fontFamily="Inter,sans-serif">{pct}%</text>
                     </svg>
                   </div>
-                  <div style={{ fontSize: '11px', color: item.color, opacity: 0.7, marginBottom: '14px' }}>{item.sub}</div>
+                  <div style={{ fontSize: '11px', color: item.color, opacity: 0.7, marginBottom: '4px' }}>{item.sub}</div>
+  <div style={{ fontSize: '10px', color: '#858ea2', marginBottom: '10px' }}>{item.sub2}</div>
                   <div style={{ height: '3px', background: item.bd, margin: '0 -16px' }}>
                     <div style={{ height: '100%', width: pct + '%', background: item.color, opacity: 0.6, borderRadius: '0 2px 2px 0' }} />
                   </div>
