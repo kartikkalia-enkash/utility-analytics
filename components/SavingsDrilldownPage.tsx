@@ -67,37 +67,41 @@ export default function SavingsDrilldownPage({ savingsKey, onBack, appState }: S
         const cas = CAS[branch] ?? [];
         for (const ca of cas) {
           if (appState.caF !== 'all' && appState.caF !== ca) continue;
-          const bills = getFilteredBills('monthly', state, branch, ca);
+          const bills = getFilteredBills('monthly', state, branch, ca) as any[];
           let amount = 0;
           let monthsAffected = 0;
           const billDetails: BillDetail[] = [];
           
-          for (const b of bills as any[]) {
-            let leakageAmt = 0;
+          if (savingsKey === 'contract') {
+            // Use same P90 MDI formula as SavingsSection
+            const mdiArr = bills.map(b => b.mdi);
+            const sorted = [...mdiArr].sort((a, b) => a - b);
+            const p90 = sorted[Math.floor(sorted.length * 0.9)] ?? 0;
+            const recommended = Math.round(p90 * 1.15 / 10) * 10;
+            const avgContracted = Math.round(bills.reduce((s, b) => s + b.contracted, 0) / Math.max(bills.length, 1));
+            const avgDemandRate = bills.reduce((s, b) => s + b.fixedCharge / Math.max(b.contracted, 1), 0) / Math.max(bills.length, 1);
+            const annualExcess = bills.reduce((s, b) => s + b.excessCharge, 0);
+            const extraFixed = Math.max(0, recommended - avgContracted) * avgDemandRate * 12;
+            amount = Math.max(0, Math.round(annualExcess - extraFixed));
             
-            if (savingsKey === 'contract') {
-              leakageAmt = b.excessCharge ?? 0;
-            } else if (savingsKey === 'pf') {
-              leakageAmt = b.pfPenalty ?? 0;
-            } else if (savingsKey === 'affected') {
-              leakageAmt = b.totalLeakage ?? 0;
-            } else if (savingsKey === 'clean') {
-              // For clean, we want to show CAs with zero leakage
-              leakageAmt = b.totalLeakage ?? 0;
-            }
-            
-            if (savingsKey === 'clean') {
-              // For clean bills, track months with NO leakage
-              if (leakageAmt === 0) {
+            // Track months with excess charge for drill-down
+            for (const b of bills) {
+              if ((b.excessCharge ?? 0) > 0) {
                 monthsAffected++;
                 billDetails.push({
                   billNumber: `${ca}-${b.label?.replace(/\s/g, '') || 'BILL'}`,
                   billMonth: formatShortMonth(b.label || 'Unknown'),
-                  leakageAmount: 0,
+                  leakageAmount: b.excessCharge ?? 0,
                 });
               }
-            } else {
-              // For other keys, track months WITH leakage
+            }
+            
+            if (amount > 0) result.push({ ca, branch, state, months: monthsAffected, amount, billDetails });
+            
+          } else if (savingsKey === 'pf') {
+            // PF saving = pfPenalty + lvSurcharge
+            for (const b of bills) {
+              const leakageAmt = (b.pfPenalty ?? 0) + (b.lvSurcharge ?? 0);
               if (leakageAmt > 0) {
                 amount += leakageAmt;
                 monthsAffected++;
@@ -108,14 +112,41 @@ export default function SavingsDrilldownPage({ savingsKey, onBack, appState }: S
                 });
               }
             }
-          }
-          
-          if (savingsKey === 'clean') {
-            // For clean, include CAs that have at least one clean bill
-            if (monthsAffected > 0) result.push({ ca, branch, state, months: monthsAffected, amount: 0, billDetails });
-          } else {
-            // For others, include CAs with leakage
+            
             if (amount > 0) result.push({ ca, branch, state, months: monthsAffected, amount, billDetails });
+            
+          } else if (savingsKey === 'affected') {
+            // Affected = totalLeakage per month
+            for (const b of bills) {
+              const leakageAmt = b.totalLeakage ?? 0;
+              if (leakageAmt > 0) {
+                amount += leakageAmt;
+                monthsAffected++;
+                billDetails.push({
+                  billNumber: `${ca}-${b.label?.replace(/\s/g, '') || 'BILL'}`,
+                  billMonth: formatShortMonth(b.label || 'Unknown'),
+                  leakageAmount: leakageAmt,
+                });
+              }
+            }
+            
+            if (amount > 0) result.push({ ca, branch, state, months: monthsAffected, amount, billDetails });
+            
+          } else if (savingsKey === 'clean') {
+            // Clean = months with zero totalLeakage
+            for (const b of bills) {
+              const leakageAmt = b.totalLeakage ?? 0;
+              if (leakageAmt === 0) {
+                monthsAffected++;
+                billDetails.push({
+                  billNumber: `${ca}-${b.label?.replace(/\s/g, '') || 'BILL'}`,
+                  billMonth: formatShortMonth(b.label || 'Unknown'),
+                  leakageAmount: 0,
+                });
+              }
+            }
+            
+            if (monthsAffected > 0) result.push({ ca, branch, state, months: monthsAffected, amount: 0, billDetails });
           }
         }
       }
@@ -187,12 +218,31 @@ export default function SavingsDrilldownPage({ savingsKey, onBack, appState }: S
 
       {/* Summary strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-        {[
-          { label: isCleanView ? 'Clean CAs' : 'Total saving potential', value: isCleanView ? String(sorted.length) : '₹' + (totalAmount / 100000).toFixed(1) + 'L', color: cfg.color, highlight: true },
-          { label: 'CAs in scope',   value: String(sorted.length), color: '#192744', highlight: false },
-          { label: isCleanView ? 'Avg clean months' : 'Avg per CA', value: sorted.length > 0 ? (isCleanView ? (sorted.reduce((s, r) => s + r.months, 0) / sorted.length).toFixed(1) : '₹' + (totalAmount / sorted.length / 100000).toFixed(2) + 'L') : '—', color: '#192744', highlight: false },
-          { label: 'Branches covered', value: String(new Set(sorted.map((r: any) => r.branch)).size), color: '#192744', highlight: false },
-        ].map((s, i) => (
+        {(() => {
+          const totalCleanMonths = sorted.reduce((s, r) => s + r.months, 0);
+          const totalBillsInScope = sorted.length * 12;
+          const cleanPct = totalBillsInScope > 0 ? Math.round((totalCleanMonths / totalBillsInScope) * 100) : 0;
+          const affectedPct = 100 - cleanPct;
+          
+          const summaryItems = savingsKey === 'clean' ? [
+            { label: 'Clean bill rate', value: cleanPct + '%', color: cfg.color, highlight: true },
+            { label: 'CAs in scope', value: String(sorted.length), color: '#192744', highlight: false },
+            { label: 'Clean months', value: String(totalCleanMonths), color: '#192744', highlight: false },
+            { label: 'Branches covered', value: String(new Set(sorted.map((r: any) => r.branch)).size), color: '#192744', highlight: false },
+          ] : savingsKey === 'affected' ? [
+            { label: 'Affected bill rate', value: affectedPct + '%', color: cfg.color, highlight: true },
+            { label: 'Total penalties', value: '₹' + (totalAmount / 100000).toFixed(1) + 'L', color: '#192744', highlight: false },
+            { label: 'CAs affected', value: String(sorted.length), color: '#192744', highlight: false },
+            { label: 'Branches covered', value: String(new Set(sorted.map((r: any) => r.branch)).size), color: '#192744', highlight: false },
+          ] : [
+            { label: 'Total saving', value: '₹' + (totalAmount / 100000).toFixed(1) + 'L', color: cfg.color, highlight: true },
+            { label: 'CAs in scope', value: String(sorted.length), color: '#192744', highlight: false },
+            { label: 'Avg per CA', value: sorted.length > 0 ? '₹' + (totalAmount / sorted.length / 100000).toFixed(2) + 'L' : '—', color: '#192744', highlight: false },
+            { label: 'Branches covered', value: String(new Set(sorted.map((r: any) => r.branch)).size), color: '#192744', highlight: false },
+          ];
+          
+          return summaryItems;
+        })().map((s, i) => (
           <div key={i} style={{
             background: s.highlight ? cfg.bg : '#fff',
             border: '1px solid ' + (s.highlight ? cfg.border : '#f0f1f5'),
