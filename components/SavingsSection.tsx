@@ -376,11 +376,12 @@ export default function SavingsSection({ appState }: SavingsSectionProps) {
           {(() => {
             const totalPotential = summary.totalIncentivePotential
 const paidViaPlatform = summary.paidViaPlatform || 1
+  const paidViaPlatformStr = inr(summary.paidViaPlatform)
   const items = [
-  { label: 'Digital payment benefit', value: summary.digitalPaymentBenefit, total: summary.totalIncentivePotential, sub: 'Accrued this period', sub2: ((summary.digitalPaymentBenefit / paidViaPlatform) * 100).toFixed(2) + '% of EnKash paid bills', color: '#36b37e', bg: '#f0faf6', bd: '#bbf7d0' },
-  { label: 'Early payment discount',  value: summary.earlyPaymentDiscount,  total: summary.totalIncentivePotential, sub: 'Across discount windows', sub2: ((summary.earlyPaymentDiscount / paidViaPlatform) * 100).toFixed(2) + '% of EnKash paid bills', color: '#36b37e', bg: '#f0faf6', bd: '#bbf7d0' },
-  { label: 'PF incentive',            value: summary.earnedPfIncentive,     total: summary.totalIncentivePotential, sub: 'Months in target', sub2: ((summary.earnedPfIncentive / paidViaPlatform) * 100).toFixed(2) + '% of EnKash paid bills', color: '#f59e0b', bg: '#fffbeb', bd: '#fde68a' },
-  { label: 'Potential upside',        value: Math.max(0, totalPotential - summary.totalEarnedIncentives), total: totalPotential, sub: 'If all targets met', sub2: ((Math.max(0, totalPotential - summary.totalEarnedIncentives) / paidViaPlatform) * 100).toFixed(2) + '% additional possible', color: '#1c5af4', bg: '#eef3fe', bd: '#c7d2fe' },
+  { label: 'Digital payment benefit', value: summary.digitalPaymentBenefit, total: summary.totalIncentivePotential, sub: 'Accrued this period', sub2: `Bill paid on EnKash: ${paidViaPlatformStr}`, color: '#36b37e', bg: '#f0faf6', bd: '#bbf7d0' },
+  { label: 'Early payment discount',  value: summary.earlyPaymentDiscount,  total: summary.totalIncentivePotential, sub: 'Across discount windows', sub2: `Bill paid on EnKash: ${paidViaPlatformStr}`, color: '#36b37e', bg: '#f0faf6', bd: '#bbf7d0' },
+  { label: 'PF incentive',            value: summary.earnedPfIncentive,     total: summary.totalIncentivePotential, sub: 'Months in target', sub2: `Bill paid on EnKash: ${paidViaPlatformStr}`, color: '#f59e0b', bg: '#fffbeb', bd: '#fde68a' },
+  { label: 'Potential upside',        value: Math.max(0, totalPotential - summary.totalEarnedIncentives), total: totalPotential, sub: 'If all targets met', sub2: `Bill paid on EnKash: ${paidViaPlatformStr}`, color: '#1c5af4', bg: '#eef3fe', bd: '#c7d2fe' },
   ] as Array<{ label: string; value: number; total: number; sub: string; sub2: string; color: string; bg: string; bd: string }>
             return items.map((item, i) => {
               const pct = Math.round((item.value / Math.max(item.total, 1)) * 100)
