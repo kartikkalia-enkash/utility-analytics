@@ -186,7 +186,7 @@ export default function LeakageDrilldownPage({ leakageKey, onBack, appState }: L
           { label: 'Total leakage',  value: '₹' + (totalAmount / 100000).toFixed(1) + 'L', color: cfg.color, highlight: true },
           { label: 'CAs affected',   value: String(sorted.length), color: '#192744', highlight: false },
           { label: 'Avg per CA',     value: sorted.length > 0 ? '₹' + (totalAmount / sorted.length / 100000).toFixed(2) + 'L' : '—', color: '#192744', highlight: false },
-          { label: 'Recommendation', value: cfg.recommendation, color: '#192744', highlight: false, small: true },
+          { label: 'Branches affected', value: String(new Set(sorted.map((r: any) => r.branch)).size), color: '#192744', highlight: false },
         ].map((s, i) => (
           <div key={i} style={{
             background: s.highlight ? cfg.bg : '#fff',
@@ -194,7 +194,7 @@ export default function LeakageDrilldownPage({ leakageKey, onBack, appState }: L
             borderRadius: 8, padding: '14px 16px',
           }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: '#858ea2', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontSize: s.small ? 11 : 22, fontWeight: s.small ? 400 : 700, color: s.color, letterSpacing: '-0.01em', lineHeight: 1.3 }}>{s.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: s.color, letterSpacing: '-0.01em', lineHeight: 1.3 }}>{s.value}</div>
           </div>
         ))}
       </div>
