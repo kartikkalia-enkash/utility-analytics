@@ -18,6 +18,23 @@ const CONFIG: Record<LeakageKey, { color: string; bg: string; border: string; de
   'Under-utilised demand': { color: '#16a34a', bg: '#f0faf6', border: '#bbf7d0', desc: 'CAs with demand consistently under-utilised below 70%.', recommendation: 'Reduce contracted demand or correct TOD slot.' },
 };
 
+// Format month label to short format (e.g., "Apr 2024" -> "Apr", "April" -> "Apr")
+function formatShortMonth(label: string): string {
+  const monthMap: Record<string, string> = {
+    'january': 'Jan', 'february': 'Feb', 'march': 'Mar', 'april': 'Apr',
+    'may': 'May', 'june': 'Jun', 'july': 'Jul', 'august': 'Aug',
+    'september': 'Sep', 'october': 'Oct', 'november': 'Nov', 'december': 'Dec',
+    'jan': 'Jan', 'feb': 'Feb', 'mar': 'Mar', 'apr': 'Apr',
+    'jun': 'Jun', 'jul': 'Jul', 'aug': 'Aug', 'sep': 'Sep', 'oct': 'Oct', 'nov': 'Nov', 'dec': 'Dec',
+  };
+  const parts = label.toLowerCase().split(/[\s,]+/);
+  for (const part of parts) {
+    if (monthMap[part]) return monthMap[part];
+  }
+  // If no match, return first 3 chars capitalized
+  return label.substring(0, 3).charAt(0).toUpperCase() + label.substring(1, 3).toLowerCase();
+}
+
 // Build lookup: caNumber -> { branch, state }
 function buildCAMeta(): Record<string, { branch: string; state: string }> {
   const meta: Record<string, { branch: string; state: string }> = {};
@@ -90,7 +107,7 @@ export default function LeakageDrilldownPage({ leakageKey, onBack, appState }: L
               monthsAffected++;
               billDetails.push({
                 billNumber: `${ca}-${b.label?.replace(/\s/g, '') || 'BILL'}`,
-                billMonth: b.label || 'Unknown',
+                billMonth: formatShortMonth(b.label || 'Unknown'),
                 leakageAmount: leakageAmt,
               });
             }
